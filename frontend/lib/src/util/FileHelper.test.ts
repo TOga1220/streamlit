@@ -17,7 +17,9 @@
 import {
   BYTE_CONVERSION_SIZE,
   FileSize,
+  deduplicateAliasExtensions,
   formatTypeForDisplay,
+  formatTypesForDisplay,
   getSizeDisplay,
   isFileTypeAllowed,
   isMimeType,
@@ -114,6 +116,55 @@ describe("sizeConverter", () => {
     expect(() =>
       sizeConverter(-1, FileSize.Gigabyte, FileSize.Gigabyte)
     ).toThrow("Size must be 0 or greater")
+  })
+})
+
+describe("deduplicateAliasExtensions", () => {
+  it("removes the alias when both extensions in a pair are present", () => {
+    expect(deduplicateAliasExtensions([".jpg", ".jpeg"])).toEqual([".jpg"])
+    expect(deduplicateAliasExtensions([".jpeg", ".jpg"])).toEqual([".jpg"])
+    expect(deduplicateAliasExtensions([".tif", ".tiff"])).toEqual([".tif"])
+    expect(deduplicateAliasExtensions([".htm", ".html"])).toEqual([".htm"])
+  })
+
+  it("keeps a single extension unchanged", () => {
+    expect(deduplicateAliasExtensions([".jpg"])).toEqual([".jpg"])
+    expect(deduplicateAliasExtensions([".jpeg"])).toEqual([".jpeg"])
+    expect(deduplicateAliasExtensions([".pdf"])).toEqual([".pdf"])
+  })
+
+  it("keeps unrelated extensions alongside pairs", () => {
+    expect(
+      deduplicateAliasExtensions([".jpg", ".jpeg", ".pdf"])
+    ).toEqual([".jpg", ".pdf"])
+  })
+
+  it("is case-insensitive", () => {
+    expect(deduplicateAliasExtensions([".JPG", ".JPEG"])).toEqual([".JPG"])
+  })
+
+  it("handles multiple alias pairs at once", () => {
+    const input = [".jpg", ".jpeg", ".tif", ".tiff", ".pdf"]
+    expect(deduplicateAliasExtensions(input)).toEqual([".jpg", ".tif", ".pdf"])
+  })
+
+  it("does not remove MIME types", () => {
+    expect(
+      deduplicateAliasExtensions(["image/jpeg", ".jpg", ".jpeg"])
+    ).toEqual(["image/jpeg", ".jpg"])
+  })
+})
+
+describe("formatTypesForDisplay", () => {
+  it("deduplicates alias extensions before formatting", () => {
+    expect(formatTypesForDisplay([".jpg", ".jpeg"])).toEqual("JPG")
+    expect(formatTypesForDisplay([".tif", ".tiff", ".pdf"])).toEqual("TIF, PDF")
+  })
+
+  it("formats a simple list without aliases", () => {
+    expect(formatTypesForDisplay([".jpg", ".png", ".pdf"])).toEqual(
+      "JPG, PNG, PDF"
+    )
   })
 })
 

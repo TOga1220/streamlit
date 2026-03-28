@@ -189,6 +189,39 @@ export const isFileTypeAllowed = (
 }
 
 /**
+ * Extension alias pairs where the first element is the preferred display form.
+ * When both extensions in a pair are present in the accepted types list, only
+ * the preferred one is shown in the UI. These mirror the backend's TYPE_PAIRS.
+ */
+const EXTENSION_ALIAS_PAIRS: ReadonlyArray<[string, string]> = [
+  [".jpg", ".jpeg"],
+  [".mpg", ".mpeg"],
+  [".mp4", ".mpeg4"],
+  [".tif", ".tiff"],
+  [".htm", ".html"],
+]
+
+/**
+ * Remove redundant alias extensions from a list of type specifiers for display
+ * purposes. When both extensions of a known alias pair are present (e.g., both
+ * ".jpg" and ".jpeg"), the secondary alias is removed so only the preferred
+ * form is shown. The accepted types passed to the browser are not affected.
+ */
+export const deduplicateAliasExtensions = (types: string[]): string[] => {
+  const lower = new Set(types.map(t => t.toLowerCase()))
+  const removed = new Set<string>()
+  for (const [primary, alias] of EXTENSION_ALIAS_PAIRS) {
+    if (lower.has(primary) && lower.has(alias)) {
+      removed.add(alias)
+    }
+  }
+  if (removed.size === 0) {
+    return types
+  }
+  return types.filter(t => !removed.has(t.toLowerCase()))
+}
+
+/**
  * Format a single file type specifier for display.
  * - MIME wildcards (image/*) -> "image"
  * - MIME types (image/jpeg) -> "image/jpeg"
@@ -211,10 +244,11 @@ export const formatTypeForDisplay = (type: string): string => {
 
 /**
  * Format a list of file type specifiers for display.
- * Returns a comma-separated string of formatted types.
+ * Deduplicates alias extensions (e.g., ".jpg"/".jpeg") and returns a
+ * comma-separated string of formatted types.
  */
 export const formatTypesForDisplay = (types: string[]): string =>
-  types.map(formatTypeForDisplay).join(", ")
+  deduplicateAliasExtensions(types).map(formatTypeForDisplay).join(", ")
 
 /**
  * Return a human-readable message for the given error.
